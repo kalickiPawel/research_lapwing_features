@@ -5,7 +5,7 @@ Project for research within Master's course Acoustic Systems, third semester
 ## Challenges in the project:
 - [ ] determination of general characteristic features in a set of sounds,
 - [ ] determination of patterns in compared signals,
-- [ ] identification of differences between samples,
+- [ ] identification of differences between bird species,
 - [ ] exploration the content of signals and search for melodic patterns,
 - [ ] determination the characteristics of the fundamental frequency,
 - [ ] examination usage of the ZCR and DTW algorithms,
