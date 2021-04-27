@@ -3,14 +3,14 @@ Research for characteristic features in the calls of the Lapwing based on the Br
 Project for research within Master's course Acoustic Systems, third semester
 
 ## Challenges in the project:
-- determining general characteristic features in a set of sounds,
+- determination of general characteristic features in a set of sounds,
 - determination of patterns in compared signals,
 - identification of differences between samples,
 - exploration the content of signals and search for melodic patterns,
-- determining the characteristics of the fundamental frequency,
+- determination the characteristics of the fundamental frequency,
 - examination usage of the ZCR and DTW algorithms,
-- comparison of the sound made by the lapwing with the others,
-- characterizing spectral features are present in the calls of the Lapwing.
+- comparison of the sound made by the lapwing with the other birds,
+- characterization the spectral features in the calls of the Lapwing.
 
 
 ## Dataset:
