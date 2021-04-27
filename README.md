@@ -19,5 +19,5 @@ The copyright in each audio file is owned by the user who donated the file to Xe
 Source: https://www.kaggle.com/rtatman/british-birdsong-dataset
 
 ## Contributors:
-<a href="url"><img src="https://github.com/Urbaniak97.png" height="auto" width="50" style="border-radius:50%"></a>
-<a href="url"><img src="https://github.com/kalickiPawel.png" height="auto" width="50" style="border-radius:50%"></a>
+<a href="https://github.com/Urbaniak97"><img src="https://github.com/Urbaniak97.png" height="auto" width="50" style="border-radius:50%"></a>
+<a href="https://github.com/kalickiPawel"><img src="https://github.com/kalickiPawel.png" height="auto" width="50" style="border-radius:50%"></a>
