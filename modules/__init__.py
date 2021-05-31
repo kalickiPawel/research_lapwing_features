@@ -1,1 +1,2 @@
-from modules.loader import DownloadKaggle
+from modules.loader import FileLoader, DownloadKaggle
+from modules.preparer import PrepareData
