@@ -1,6 +1,8 @@
 from modules import DownloadKaggle
 from modules import PrepareData
 from matplotlib import pyplot as plt
+from librosa import stft, amplitude_to_db
+import librosa.display
 
 if __name__ == "__main__":
     dest, bird = 'output', 'Fringilla'
@@ -11,12 +13,10 @@ if __name__ == "__main__":
     df = data.audio_data
     
     for i, r in df.loc[df['genus'] == bird].iterrows():
-        Pxx, freqs, bins, im = plt.specgram(
-            r.get('data'),
-            Fs=r.get('samplerate')
-        )
+        X = stft(r.get('data'))
+        Xdb = amplitude_to_db(abs(X))
+        plt.figure()
         plt.title(f"Spectogram bird {i}")
-        plt.ylabel('Frequency [Hz]')
-        plt.xlabel('Time [sec]')
+        librosa.display.specshow(Xdb, sr=r.get('samplerate'), x_axis='s', y_axis='hz')
+        plt.colorbar()
         plt.show()
-
