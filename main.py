@@ -1,10 +1,15 @@
-import sklearn
+from scipy.signal import find_peaks
+from sklearn.svm import SVC
+from sklearn.metrics import confusion_matrix
 
 from modules import DownloadKaggle
 from modules import PrepareData
 from matplotlib import pyplot as plt
 from librosa import stft, amplitude_to_db
 import librosa.display
+import numpy as np
+import seaborn as sns
+
 
 if __name__ == "__main__":
     dest, bird = 'output', 'Fringilla'
@@ -14,6 +19,10 @@ if __name__ == "__main__":
 
     df = data.audio_data
 
+    frame_size = 1024
+    hop_length = int(0.75 * frame_size)
+    results = {}
+
     for i, r in df.loc[df['genus'] == bird].iterrows():
         x, sr = r.get('data'), r.get('samplerate')
         X = stft(x)
@@ -22,53 +31,74 @@ if __name__ == "__main__":
         plt.title(f"Spectogram bird id: {i}")
         spec = librosa.display.specshow(Xdb, sr=sr, x_axis='s', y_axis='hz')
         plt.colorbar(spec)
-        plt.show()
+        # plt.show()
 
-        fig, axes = plt.subplots(3, 2, figsize=(20, 18))
-        fig.tight_layout(rect=[0.02, 0.03, 1, 0.95], h_pad=3.0)
-        fig.suptitle(f"Bird {i}: {r.get('species')}, {r.get('english_cname')} - {r.get('country')} ==> {r.get('type')}")
+        signal_out = np.array([max(x[i:i + frame_size]) for i in range(0, len(x), hop_length)])
+        t = librosa.frames_to_time(range(0, signal_out.size), hop_length=hop_length)
 
-        n0, n1 = 9000, 9100
-        axes[0, 0].plot(x[n0:n1])
-        axes[0, 0].set_title(f"Samples {n0} to {n1}")
-        axes[0, 0].grid()
+        peaks, _ = find_peaks(signal_out, prominence=0.4)
+        if len(peaks) >= 10:
+            results[f"lapwing_{i}"] = t[peaks]
+        fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+        ax.set_title(f"Envelope bird id: {i}")
+        librosa.display.waveplot(x, ax=ax, alpha=0.5)
+        ax.set_ylim((-1, 1))
+        ax.plot(t, signal_out, color='r')
+        ax.plot(t[peaks], signal_out[peaks], "x")
+        # plt.show()
 
-        axes[1, 0].plot(1, 1)
+    for i, r in df.loc[df['genus'] != bird].iterrows():
+        x, sr = r.get('data'), r.get('samplerate')
+        signal_out = np.array([max(x[i:i + frame_size]) for i in range(0, len(x), hop_length)])
+        t = librosa.frames_to_time(range(0, signal_out.size), hop_length=hop_length)
+        peaks, _ = find_peaks(signal_out, prominence=0.4)
+        if len(peaks) >= 10:
+            results[f"not_lapwing_{i}"] = t[peaks]
 
-        spectral_centroids = librosa.feature.spectral_centroid(x, sr=sr)[0]
-        frames = range(len(spectral_centroids))
-        t = librosa.frames_to_time(frames)
+    X_train, y_train = [], []
+    X_test, y_test = [], []
+    i, j = 0, 0
 
-        def normalize(x, axis=0):
-            return sklearn.preprocessing.minmax_scale(x, axis=axis)
+    for k, v in results.items():
+        if 'not_lapwing' in k:
+            if i < 3:
+                X_train.append(v[:10])
+                y_train.append(1)
+            else:
+                X_test.append(v[:10])
+                y_test.append(1)
+            i += 1
+        elif 'lapwing' in k:
+            if j % 2 == 0:
+                if j != 0:
+                    X_train.append(v[:10])
+                    y_train.append(0)
+            else:
+                X_test.append(v[:10])
+                y_test.append(0)
+            j += 1
 
-        # Plotting the Spectral Centroid along the waveform
-        librosa.display.waveplot(x, sr=sr, alpha=0.4, ax=axes[1, 0])
-        axes[1, 0].plot(t, normalize(spectral_centroids), color='r')
-        axes[1, 0].set_title("Spectral centroid")
+    X_train, y_train = np.array(X_train, dtype=object), np.array(y_train, dtype='bool')
+    X_test, y_test = np.array(X_test, dtype=object), np.array(y_test, dtype='bool')
 
-        spectral_rolloff = librosa.feature.spectral_rolloff(x + 0.01, sr=sr)[0]
-        librosa.display.waveplot(x, sr=sr, alpha=0.4, ax=axes[2, 0])
-        axes[2, 0].plot(t, normalize(spectral_rolloff), color='r')
-        axes[2, 0].set_title("Spectral Rolloff")
-        axes[2, 0].grid()
+    print(f"Num of samples in train set: {X_train.shape}")
+    print(f"Num of samples in test set: {X_test.shape}")
 
-        mfccs = librosa.feature.mfcc(x, sr=sr)
-        librosa.display.specshow(mfccs, sr=sr, x_axis='time', ax=axes[0, 1])
-        axes[0, 1].set_title("MFCC")
+    classifier = SVC(kernel='rbf', random_state=1)
+    classifier.fit(X_train, y_train)
 
-        mfccs = sklearn.preprocessing.scale(mfccs, axis=1)
-        librosa.display.specshow(mfccs, sr=sr, x_axis='time', ax=axes[1, 1])
-        axes[1, 1].set_title("MFCC Feature Scaling")
+    counter = 0
+    for i in range(1000):
+        y_pred = classifier.predict(X_test)
+        counter += y_pred[0] is False
+    print(counter)
 
-        print(mfccs.mean(axis=1))
-        print(mfccs.var(axis=1))
+    y_pred = classifier.predict(X_test)
+    cm = confusion_matrix(y_test, y_pred)
+    sns.heatmap(cm)
+    plt.xlabel('true label')
+    plt.ylabel('predicted label')
+    plt.show()
 
-        hop_length = 512
-        chromagram = librosa.feature.chroma_stft(x, sr=sr, hop_length=hop_length)
-        librosa.display.specshow(chromagram, x_axis='time', y_axis='chroma', hop_length=hop_length,
-                                 cmap='coolwarm', ax=axes[2, 1])
-        axes[2, 1].set_title("Chroma Frequencies")
-        plt.show()
-
-        print(f"Sum of zero crossings for bird: {i} is {sum(librosa.zero_crossings(x[n0:n1], pad=False))}")
+    accuracy = float(cm.diagonal().sum()) / len(y_test)
+    print("\nAccuracy Of SVM For The Given Dataset: ", accuracy)
