@@ -2,7 +2,7 @@ from scipy.signal import find_peaks, correlate
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
 
-from tqdm import trange
+from tqdm import trange, tqdm
 from modules import DownloadKaggle
 from modules import PrepareData
 from matplotlib import pyplot as plt
@@ -31,23 +31,24 @@ def our_func(results: dict):
     for k, v in results.items():
         if 'not_lapwing' in k:
             if i < 3:
-                X_train.append(v[:10])
+                X_train.append(v if isinstance(v, float) else v[:10])
                 y_train.append(1)
             else:
-                X_test.append(v[:10])
+                X_test.append(v if isinstance(v, float) else v[:10])
                 y_test.append(1)
             i += 1
         elif 'lapwing' in k:
             if j % 2 == 0:
                 if j != 0:
-                    X_train.append(v[:10])
+                    X_train.append(v if isinstance(v, float) else v[:10])
                     y_train.append(0)
             else:
-                X_test.append(v[:10])
+                X_test.append(v if isinstance(v, float) else v[:10])
                 y_test.append(0)
             j += 1
 
     X_train, y_train = np.array(X_train, dtype=object), np.array(y_train, dtype='bool')
+    # for calc f0 add to X_train, X_test .reshape(-1, 1)
     X_test, y_test = np.array(X_test, dtype=object), np.array(y_test, dtype='bool')
     return X_train, y_train, X_test, y_test
 
@@ -67,7 +68,7 @@ if __name__ == "__main__":
 
     results, results2 = {}, {}
 
-    for i, r in df.loc[df['genus'] == bird].iterrows():
+    for i, r in tqdm(df.loc[df['genus'] == bird].iterrows(), total=df.loc[df['genus'] == bird].shape[0]):
         x, sr = r.get('data'), r.get('samplerate')
         x = nr.reduce_noise(audio_clip=x, noise_clip=x, prop_decrease=1, verbose=False)
         X = stft(x)
@@ -76,7 +77,7 @@ if __name__ == "__main__":
         plt.title(f"Spectogram bird id: {i}")
         spec = librosa.display.specshow(Xdb, sr=sr, x_axis='s', y_axis='hz')
         plt.colorbar(spec)
-        plt.show()
+        # plt.show()
 
         signal_out = np.array([max(x[i:i + frame_size]) for i in range(0, len(x), hop_length)])
         t = librosa.frames_to_time(range(0, signal_out.size), hop_length=hop_length)
@@ -84,14 +85,14 @@ if __name__ == "__main__":
         peaks, _ = find_peaks(signal_out, prominence=0.4)
         if len(peaks) >= 10:
             results[f"lapwing_{i}"] = t[peaks]
-            results2[f"not_lapwing_{i}"] = find_dom_frq(x, sr)
+            # results2[f"lapwing_{i}"] = find_dom_frq(x, sr)
         fig, ax = plt.subplots(1, 1, figsize=(8, 5))
         ax.set_title(f"Envelope bird id: {i}")
         librosa.display.waveplot(x, ax=ax, alpha=0.5)
         ax.set_ylim((-1, 1))
         ax.plot(t, signal_out, color='r')
         ax.plot(t[peaks], signal_out[peaks], "x")
-        plt.show()
+        # plt.show()
 
         logmelspec = librosa.core.amplitude_to_db(
             librosa.feature.melspectrogram(
@@ -119,9 +120,9 @@ if __name__ == "__main__":
                                  x_axis='time',
                                  y_axis='mel')
         plt.title('Mel spectrogram - file number ' + str(i))
-        plt.show()
+        # plt.show()
 
-    for i, r in df.loc[df['genus'] != bird].iterrows():
+    for i, r in tqdm(df.loc[df['genus'] != bird].iterrows(), total=df.loc[df['genus'] != bird].shape[0]):
         x, sr = r.get('data'), r.get('samplerate')
         x = nr.reduce_noise(audio_clip=x, noise_clip=x, prop_decrease=1, verbose=False)
         signal_out = np.array([max(x[i:i + frame_size]) for i in range(0, len(x), hop_length)])
@@ -129,7 +130,7 @@ if __name__ == "__main__":
         peaks, _ = find_peaks(signal_out, prominence=0.4)
         if len(peaks) >= 10:
             results[f"not_lapwing_{i}"] = t[peaks]
-            results2[f"not_lapwing_{i}"] = find_dom_frq(x, sr)
+            # results2[f"not_lapwing_{i}"] = find_dom_frq(x, sr)
 
     X_train, y_train, X_test, y_test = our_func(results)
     # X_train, y_train, X_test, y_test = our_func(results2)
