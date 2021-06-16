@@ -32,6 +32,7 @@ def draw_spec(x, fs, ax):
     ax.pcolormesh(t, f, Sxx, shading='gouraud')
     ax.set_ylabel('Frequency [Hz]')
     ax.set_xlabel('Time [sec]')
+    return f, t, Sxx
 
 
 class LapwingRecognition:
@@ -42,22 +43,25 @@ class LapwingRecognition:
         self.win_type = win_type
 
     def load_results(self, df: pandas.DataFrame, type_of_set: bool, results: dict):
+        spec_counted = False
         for i, r in tqdm(df.iterrows(), total=df.shape[0]):
             x, fs = r.get('data'), r.get('samplerate')
             x = nr.reduce_noise(audio_clip=x, noise_clip=x, prop_decrease=1, verbose=False)
             sig_out, t, peaks, = self.find_onsets(x, prominance=0.4)
 
             if type_of_set:
+                spec_counted = True
                 fig, ax = plt.subplots(3, 1, figsize=(8, 5))
                 plt.suptitle(f"{r.get('genus')} no.{i}")
                 librosa.display.waveplot(x, ax=ax[0], alpha=0.5)
                 draw_peaks(x, sig_out, t, peaks, ax[1])
-                draw_spec(x, fs, ax[2])
+                f, t_spec, Sxx = draw_spec(x, fs, ax[2])
                 plt.show()
 
             # TODO: Use peaks and spec to create characteristic feature (then change t[peaks] to something other)
+            if not spec_counted:
+                f, t_spec, Sxx = get_spec(x, fs)
 
-            f, t, Sxx = get_spec(x, fs)
             if len(peaks) > 0:
                 if type_of_set:
                     results[f"lapwing_{i}"] = t[peaks]
@@ -73,9 +77,10 @@ class LapwingRecognition:
         return s_out, t, peaks
 
     def split_to_test_train(self, results: dict):
-        print(len([f for f in results.keys() if 'lapwing' in f]))
-        # cout_lapwing = len('lapwing' in results.keys())
-        # count_not_lapwing =
+        not_lapwing = [v for k, v in results.items() if 'not_lapwing' in k]
+        lapwing = [v for k, v in results.items() if 'lapwing' in k and 'not' not in k]
+        print(len(not_lapwing))
+        print(len(lapwing))
         x_train, y_train = [], []
         X_test, y_test = [], []
         position_of_lapwing = 0

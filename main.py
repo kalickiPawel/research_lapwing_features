@@ -16,7 +16,7 @@ if __name__ == "__main__":
     results = lap.load_results(df.loc[df['genus'] == bird], True, results)
     results = lap.load_results(df.loc[df['genus'] != bird], False, results)
 
-    X_train, y_train, X_test, y_test = lap.split_to_test_train(results)
+    X_train, y_train, X_test, y_test, pos_lap = lap.split_to_test_train(results)
 
     print(f"Num of samples in train set: {X_train.shape}")
     print(f"Num of samples in test set: {X_test.shape}")
